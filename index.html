@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Posłaniec Thamaela</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial;max-width:900px;margin:40px auto;padding:0 16px;line-height:1.5}
+    .card{border:1px solid #ddd;border-radius:14px;padding:18px;margin:14px 0}
+    input,textarea,button{width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;font-size:16px}
+    button{cursor:pointer;font-weight:700}
+    small{color:#666}
+  </style>
+</head>
+<body>
+  <h1>Posłaniec Thamaela</h1>
+  <p><small>Testowa aplikacja (GitHub Pages). Tu potem Codex będzie generował kolejne wersje.</small></p>
+
+  <div class="card">
+    <h2>Notatka</h2>
+    <textarea id="t" rows="6" placeholder="Wpisz treść..."></textarea>
+    <button onclick="save()">Zapisz lokalnie</button>
+    <p id="msg"></p>
+  </div>
+
+  <script>
+    const key="poslaniec-note";
+    const t=document.getElementById("t");
+    const msg=document.getElementById("msg");
+    t.value = localStorage.getItem(key) || "";
+    function save(){
+      localStorage.setItem(key, t.value);
+      msg.textContent="Zapisano ✅";
+      setTimeout(()=>msg.textContent="",1500);
+    }
+  </script>
+</body>
+</html>
