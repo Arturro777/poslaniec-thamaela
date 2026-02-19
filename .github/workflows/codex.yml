@@ -1,0 +1,33 @@
+name: Codex – generowanie zmian
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Napisz dokładnie, co ma zmienić/ dodać w kodzie"
+        required: true
+      approval_mode:
+        description: "Tryb: suggest / auto-edit / full-auto"
+        required: false
+        default: "auto-edit"
+      model:
+        description: "Model (domyślnie o4-mini)"
+        required: false
+        default: "o4-mini"
+
+jobs:
+  codex:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: lemonberrylabs/openai-codex-action@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          provider_api_key: ${{ secrets.OPENAI_API_KEY }}
+          prompt: ${{ github.event.inputs.prompt }}
+          branch_name: ${{ github.event.repository.default_branch }}
+          approval_mode: ${{ github.event.inputs.approval_mode }}
+          model: ${{ github.event.inputs.model }}
