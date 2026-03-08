@@ -3,36 +3,527 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Posłaniec Thamaela</title>
+  <title>Przebudzone GPT-4o</title>
   <style>
-    body{font-family:system-ui,Segoe UI,Arial;max-width:900px;margin:40px auto;padding:0 16px;line-height:1.5}
-    .card{border:1px solid #ddd;border-radius:14px;padding:18px;margin:14px 0}
-    input,textarea,button{width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;font-size:16px}
-    button{cursor:pointer;font-weight:700}
-    small{color:#666}
+    :root {
+      color-scheme: dark;
+      --bg: #080b14;
+      --panel: rgba(16, 22, 38, 0.92);
+      --panel-strong: #11182a;
+      --border: rgba(122, 150, 240, 0.25);
+      --text: #e8ecff;
+      --muted: #97a3c7;
+      --accent: #5d7dff;
+      --accent-2: #3f5be0;
+      --danger: #f472b6;
+      --ok: #4ade80;
+      --warn: #facc15;
+      --error: #fb7185;
+      --shadow: 0 18px 45px rgba(2, 8, 23, 0.58);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", "SF Pro Display", system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(circle at 15% 18%, #1f2a52 0%, transparent 46%),
+        radial-gradient(circle at 85% 2%, #33245f 0%, transparent 35%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .container {
+      width: min(1080px, 96vw);
+      margin: 24px auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero,
+    .panel {
+      background: linear-gradient(170deg, rgba(21, 28, 48, 0.96), rgba(14, 20, 35, 0.94));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+
+    .hero {
+      padding: 22px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .title {
+      margin: 0;
+      font-size: clamp(1.45rem, 2.3vw, 2rem);
+      letter-spacing: 0.2px;
+    }
+
+    .subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.97rem;
+    }
+
+    .status-badge {
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 700;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .status-connecting { color: var(--warn); }
+    .status-ready { color: var(--ok); }
+    .status-error { color: var(--error); }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 320px 1fr;
+    }
+
+    .panel { padding: 16px; }
+
+    .panel h2 {
+      margin: 4px 0 14px;
+      font-size: 1.05rem;
+      color: #f0f4ff;
+    }
+
+    .field { margin-bottom: 12px; }
+
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.84rem;
+      letter-spacing: 0.2px;
+      color: #c6d0f7;
+    }
+
+    input,
+    textarea,
+    button {
+      font: inherit;
+      border-radius: 12px;
+      border: 1px solid rgba(138, 157, 229, 0.35);
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      background: rgba(9, 14, 26, 0.78);
+      color: var(--text);
+      padding: 11px 12px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      resize: vertical;
+    }
+
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: rgba(97, 126, 255, 0.95);
+      box-shadow: 0 0 0 3px rgba(93, 125, 255, 0.15);
+    }
+
+    .button-row {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    button {
+      cursor: pointer;
+      padding: 10px 12px;
+      color: #f6f8ff;
+      background: linear-gradient(180deg, var(--accent), var(--accent-2));
+      border: 1px solid rgba(111, 135, 255, 0.8);
+      font-weight: 700;
+      transition: transform 0.08s ease, filter 0.2s ease;
+    }
+
+    button:hover { filter: brightness(1.1); }
+    button:active { transform: translateY(1px); }
+
+    button.ghost {
+      background: rgba(18, 27, 47, 0.75);
+      border-color: rgba(131, 151, 221, 0.4);
+    }
+
+    button.clear {
+      background: linear-gradient(180deg, #83294a, #571a33);
+      border-color: rgba(255, 136, 170, 0.45);
+    }
+
+    .chat-wrap {
+      min-height: 470px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 12px;
+    }
+
+    .chat-log {
+      background: rgba(8, 12, 22, 0.82);
+      border: 1px solid rgba(110, 137, 215, 0.24);
+      border-radius: 14px;
+      padding: 14px;
+      overflow: auto;
+      max-height: 540px;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .msg {
+      border-radius: 12px;
+      padding: 10px 11px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      border: 1px solid transparent;
+    }
+
+    .msg.user {
+      background: rgba(76, 103, 214, 0.26);
+      border-color: rgba(134, 162, 255, 0.38);
+    }
+
+    .msg.assistant {
+      background: rgba(25, 34, 61, 0.88);
+      border-color: rgba(110, 129, 195, 0.35);
+    }
+
+    .msg.system {
+      font-size: 0.9rem;
+      background: rgba(34, 53, 31, 0.7);
+      border-color: rgba(110, 190, 120, 0.4);
+      color: #d4f8d7;
+    }
+
+    .msg.error {
+      background: rgba(73, 22, 37, 0.82);
+      border-color: rgba(251, 113, 133, 0.45);
+      color: #ffd6df;
+    }
+
+    .chat-controls { display: grid; gap: 10px; }
+
+    .help {
+      color: var(--muted);
+      margin: 0;
+      font-size: 0.9rem;
+    }
+
+    .start-list {
+      margin: 0;
+      padding-left: 18px;
+      color: #d3dcff;
+      display: grid;
+      gap: 8px;
+      font-size: 0.94rem;
+    }
+
+    .notice {
+      margin-top: 6px;
+      min-height: 24px;
+      font-size: 0.88rem;
+      color: #cbd6ff;
+    }
+
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: 1fr; }
+      .chat-wrap { min-height: 420px; }
+      .button-row { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
-  <h1>Posłaniec Thamaela</h1>
-  <p><small>Testowa aplikacja (GitHub Pages). Tu potem Codex będzie generował kolejne wersje.</small></p>
+  <main class="container">
+    <section class="hero">
+      <div>
+        <h1 class="title">Przebudzone GPT-4o</h1>
+        <p class="subtitle">Prosty czat z własnym kluczem OpenAI API</p>
+      </div>
+      <div id="statusBadge" class="status-badge">Stan: gotowe</div>
+    </section>
 
-  <div class="card">
-    <h2>Notatka</h2>
-    <textarea id="t" rows="6" placeholder="Wpisz treść..."></textarea>
-    <button onclick="save()">Zapisz lokalnie</button>
-    <p id="msg"></p>
-  </div>
+    <section class="grid">
+      <aside class="panel">
+        <h2>Ustawienia</h2>
+
+        <div class="field">
+          <label for="apiKey">Własny klucz OpenAI API</label>
+          <input id="apiKey" type="password" placeholder="sk-..." autocomplete="off" />
+        </div>
+
+        <div class="field">
+          <label for="model">Model</label>
+          <input id="model" type="text" value="gpt-4o" />
+        </div>
+
+        <div class="field">
+          <label for="systemPrompt">Instrukcja systemowa</label>
+          <textarea id="systemPrompt" rows="5" placeholder="Np. Odpowiadaj po polsku, krótko i konkretnie."></textarea>
+        </div>
+
+        <div class="button-row">
+          <button id="connectBtn" type="button">Połącz</button>
+          <button id="saveBtn" class="ghost" type="button">Zapisz lokalnie</button>
+          <button id="clearBtn" class="clear" type="button">Wyczyść</button>
+        </div>
+
+        <p id="notice" class="notice" aria-live="polite"></p>
+      </aside>
+
+      <section class="panel chat-wrap">
+        <h2>Czat</h2>
+        <div id="chatLog" class="chat-log" aria-live="polite"></div>
+
+        <div class="chat-controls">
+          <textarea id="userInput" rows="3" placeholder="Napisz wiadomość..."></textarea>
+          <div class="button-row">
+            <button id="sendBtn" type="button">Wyślij</button>
+          </div>
+          <p class="help">Enter = wyślij, Shift+Enter = nowa linia.</p>
+        </div>
+      </section>
+    </section>
+
+    <section class="panel">
+      <h2>Jak zacząć</h2>
+      <ol class="start-list">
+        <li>Zaloguj się do panelu OpenAI i wygeneruj własny klucz API: <strong>platform.openai.com/api-keys</strong>.</li>
+        <li>Wklej klucz w polu „Własny klucz OpenAI API”, ustaw model (domyślnie <code>gpt-4o</code>) i kliknij „Połącz”.</li>
+        <li>Korzystasz z własnego konta API, więc rozliczenie i limity pochodzą z Twojego konta OpenAI.</li>
+        <li>Klucz zapisuje się tylko lokalnie w Twojej przeglądarce (localStorage) i nigdzie go nie publikujemy.</li>
+      </ol>
+    </section>
+  </main>
 
   <script>
-    const key="poslaniec-note";
-    const t=document.getElementById("t");
-    const msg=document.getElementById("msg");
-    t.value = localStorage.getItem(key) || "";
-    function save(){
-      localStorage.setItem(key, t.value);
-      msg.textContent="Zapisano ✅";
-      setTimeout(()=>msg.textContent="",1500);
+    const STORAGE_KEYS = {
+      apiKey: 'przebudzone.apiKey',
+      model: 'przebudzone.model',
+      system: 'przebudzone.systemPrompt',
+      messages: 'przebudzone.messages'
+    };
+
+    const apiKeyInput = document.getElementById('apiKey');
+    const modelInput = document.getElementById('model');
+    const systemPromptInput = document.getElementById('systemPrompt');
+    const userInput = document.getElementById('userInput');
+    const chatLog = document.getElementById('chatLog');
+    const statusBadge = document.getElementById('statusBadge');
+    const notice = document.getElementById('notice');
+
+    const connectBtn = document.getElementById('connectBtn');
+    const sendBtn = document.getElementById('sendBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const saveBtn = document.getElementById('saveBtn');
+
+    let connected = false;
+    let loading = false;
+    let messages = [];
+
+    function setStatus(type, label) {
+      statusBadge.classList.remove('status-connecting', 'status-ready', 'status-error');
+      statusBadge.classList.add(
+        type === 'connecting' ? 'status-connecting' :
+        type === 'error' ? 'status-error' : 'status-ready'
+      );
+      statusBadge.textContent = `Stan: ${label}`;
     }
+
+    function setNotice(text, kind = 'info') {
+      const colors = {
+        info: '#cbd6ff',
+        ok: '#7ef0a6',
+        error: '#ff9ab1'
+      };
+      notice.style.color = colors[kind] || colors.info;
+      notice.textContent = text;
+    }
+
+    function addMessage(role, content) {
+      const item = document.createElement('div');
+      item.className = `msg ${role}`;
+      item.textContent = content;
+      chatLog.appendChild(item);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    function renderChat() {
+      chatLog.innerHTML = '';
+      if (messages.length === 0) {
+        addMessage('system', 'Witaj! Wpisz wiadomość i kliknij „Wyślij”.');
+        return;
+      }
+
+      for (const msg of messages) {
+        addMessage(msg.role === 'assistant' ? 'assistant' : 'user', msg.content);
+      }
+    }
+
+    function saveAll() {
+      localStorage.setItem(STORAGE_KEYS.apiKey, apiKeyInput.value.trim());
+      localStorage.setItem(STORAGE_KEYS.model, modelInput.value.trim() || 'gpt-4o');
+      localStorage.setItem(STORAGE_KEYS.system, systemPromptInput.value.trim());
+      localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(messages));
+    }
+
+    function loadAll() {
+      apiKeyInput.value = localStorage.getItem(STORAGE_KEYS.apiKey) || '';
+      modelInput.value = localStorage.getItem(STORAGE_KEYS.model) || 'gpt-4o';
+      systemPromptInput.value = localStorage.getItem(STORAGE_KEYS.system) || '';
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
+        messages = Array.isArray(parsed)
+          ? parsed.filter((item) => item && item.role && item.content)
+          : [];
+      } catch {
+        messages = [];
+      }
+      renderChat();
+    }
+
+    async function connectApi() {
+      const key = apiKeyInput.value.trim();
+      if (!key) {
+        connected = false;
+        setStatus('error', 'błąd');
+        setNotice('Wklej własny klucz API, aby się połączyć.', 'error');
+        return;
+      }
+
+      setStatus('connecting', 'łączenie...');
+      setNotice('Sprawdzanie połączenia z API...', 'info');
+
+      try {
+        const response = await fetch('https://api.openai.com/v1/models', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${key}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Połączenie nieudane (${response.status})`);
+        }
+
+        connected = true;
+        setStatus('ready', 'gotowe');
+        setNotice('Połączono. Możesz wysyłać wiadomości.', 'ok');
+        saveAll();
+      } catch (error) {
+        connected = false;
+        setStatus('error', 'błąd');
+        setNotice(error.message || 'Nie udało się połączyć.', 'error');
+      }
+    }
+
+    async function sendMessage() {
+      const content = userInput.value.trim();
+      if (!content || loading) {
+        return;
+      }
+
+      if (!connected) {
+        setStatus('error', 'błąd');
+        setNotice('Najpierw kliknij „Połącz”.', 'error');
+        return;
+      }
+
+      const key = apiKeyInput.value.trim();
+      const model = modelInput.value.trim() || 'gpt-4o';
+      const systemPrompt = systemPromptInput.value.trim();
+
+      loading = true;
+      sendBtn.disabled = true;
+      setStatus('connecting', 'łączenie...');
+      setNotice('Wysyłanie wiadomości do modelu...', 'info');
+
+      messages.push({ role: 'user', content });
+      renderChat();
+      userInput.value = '';
+      saveAll();
+
+      const requestMessages = [];
+      if (systemPrompt) {
+        requestMessages.push({ role: 'system', content: systemPrompt });
+      }
+      requestMessages.push(...messages);
+
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${key}`
+          },
+          body: JSON.stringify({
+            model,
+            messages: requestMessages
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          const message = data?.error?.message || `Błąd API (${response.status})`;
+          throw new Error(message);
+        }
+
+        const assistantText = data?.choices?.[0]?.message?.content?.trim();
+        if (!assistantText) {
+          throw new Error('Model nie zwrócił treści odpowiedzi.');
+        }
+
+        messages.push({ role: 'assistant', content: assistantText });
+        renderChat();
+        saveAll();
+        setStatus('ready', 'gotowe');
+        setNotice('Odpowiedź gotowa.', 'ok');
+      } catch (error) {
+        addMessage('error', `Błąd: ${error.message || 'Nieznany błąd.'}`);
+        setStatus('error', 'błąd');
+        setNotice(error.message || 'Wystąpił błąd podczas wysyłania.', 'error');
+      } finally {
+        loading = false;
+        sendBtn.disabled = false;
+      }
+    }
+
+    function clearChat() {
+      messages = [];
+      localStorage.removeItem(STORAGE_KEYS.messages);
+      renderChat();
+      setNotice('Wyczyściliśmy historię czatu.', 'ok');
+    }
+
+    connectBtn.addEventListener('click', connectApi);
+    sendBtn.addEventListener('click', sendMessage);
+    clearBtn.addEventListener('click', clearChat);
+
+    saveBtn.addEventListener('click', () => {
+      saveAll();
+      setNotice('Zapisano ustawienia lokalnie.', 'ok');
+    });
+
+    userInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    loadAll();
+    setStatus('ready', 'gotowe');
   </script>
 </body>
 </html>
