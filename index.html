@@ -273,9 +273,11 @@
         linear-gradient(180deg, rgba(89, 117, 255, 0.18), rgba(255, 198, 116, 0.14));
       box-shadow: 0 0 24px rgba(255, 224, 154, 0.2);
       animation: floaty 4.5s ease-in-out infinite;
+      display: block;
+      object-fit: cover;
     }
 
-    .avatar::before {
+    .avatar-placeholder::before {
       content: "";
       position: absolute;
       inset: 18% 22% 16%;
@@ -284,7 +286,7 @@
       box-shadow: 0 0 18px rgba(255, 255, 245, 0.65);
     }
 
-    .avatar::after {
+    .avatar-placeholder::after {
       content: "";
       position: absolute;
       width: 62%;
@@ -293,6 +295,12 @@
       top: 10%;
       border-radius: 50%;
       background: radial-gradient(circle at 50% 45%, rgba(255, 255, 245, 0.7), rgba(182, 195, 255, 0.08));
+    }
+
+    .avatar-placeholder {
+      background:
+        radial-gradient(circle at 50% 12%, rgba(255, 244, 198, 0.48), transparent 29%),
+        linear-gradient(180deg, rgba(157, 200, 255, 0.24), rgba(255, 204, 135, 0.2));
     }
 
     .eyes,
@@ -347,6 +355,31 @@
       border-bottom-width: 4px;
       width: 24%;
       top: 57%;
+    }
+
+    .avatar:not(.avatar-placeholder) .halo,
+    .avatar:not(.avatar-placeholder) .eyes,
+    .avatar:not(.avatar-placeholder) .mouth {
+      display: none;
+    }
+
+    .avatar-controls {
+      width: 100%;
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .avatar-controls button {
+      width: 100%;
+      padding: 9px 10px;
+      font-size: 0.92rem;
+    }
+
+    .avatar-controls .muted {
+      opacity: 0.88;
+      background: linear-gradient(180deg, rgba(140, 149, 201, 0.5), rgba(81, 83, 125, 0.55));
+      border-color: rgba(187, 197, 255, 0.5);
     }
 
     .avatar-status {
@@ -512,12 +545,19 @@
 
         <div class="chat-top">
           <div id="avatarPanel" class="avatar-panel">
-            <div id="avatar" class="avatar" data-state="idle" aria-live="polite">
+            <h2>Panel avatara AI</h2>
+            <div id="avatar" class="avatar avatar-placeholder" data-state="idle" aria-live="polite">
               <div class="halo"></div>
               <div class="eyes"><span class="eye"></span><span class="eye"></span></div>
               <div class="mouth"></div>
             </div>
             <div id="avatarStatus" class="avatar-status">Stan avatara: bezczynny</div>
+            <div class="avatar-controls">
+              <input id="avatarUploadInput" type="file" accept="image/*" hidden />
+              <button id="uploadAvatarBtn" type="button">Wgraj avatar</button>
+              <button id="changeAvatarBtn" class="ghost" type="button">Zmień avatar</button>
+              <button id="removeAvatarBtn" class="clear" type="button">Usuń avatar</button>
+            </div>
           </div>
 
           <div id="chatLog" class="chat-log" aria-live="polite"></div>
@@ -553,7 +593,8 @@
       showAvatar: 'przebudzone.showAvatar',
       voiceEnabled: 'przebudzone.voiceEnabled',
       autoRead: 'przebudzone.autoRead',
-      voiceName: 'przebudzone.voiceName'
+      voiceName: 'przebudzone.voiceName',
+      avatarImage: 'przebudzone.avatarImage'
     };
 
     const apiKeyInput = document.getElementById('apiKey');
@@ -576,12 +617,69 @@
     const avatarPanel = document.getElementById('avatarPanel');
     const avatar = document.getElementById('avatar');
     const avatarStatus = document.getElementById('avatarStatus');
+    const avatarUploadInput = document.getElementById('avatarUploadInput');
+    const uploadAvatarBtn = document.getElementById('uploadAvatarBtn');
+    const changeAvatarBtn = document.getElementById('changeAvatarBtn');
+    const removeAvatarBtn = document.getElementById('removeAvatarBtn');
 
     let connected = false;
     let loading = false;
     let messages = [];
     let voices = [];
     let speaking = false;
+    let userAvatarData = '';
+
+    function syncAvatarButtons() {
+      const hasAvatar = Boolean(userAvatarData);
+      uploadAvatarBtn.style.display = hasAvatar ? 'none' : 'block';
+      changeAvatarBtn.style.display = hasAvatar ? 'block' : 'none';
+      removeAvatarBtn.style.display = hasAvatar ? 'block' : 'none';
+    }
+
+    function renderAvatarImage() {
+      if (userAvatarData) {
+        avatar.classList.remove('avatar-placeholder');
+        avatar.style.backgroundImage = `url(${userAvatarData})`;
+        avatar.style.backgroundSize = 'cover';
+        avatar.style.backgroundPosition = 'center';
+      } else {
+        avatar.classList.add('avatar-placeholder');
+        avatar.style.removeProperty('background-image');
+        avatar.style.removeProperty('background-size');
+        avatar.style.removeProperty('background-position');
+      }
+      syncAvatarButtons();
+    }
+
+    function handleAvatarUpload(file) {
+      if (!file) {
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        setNotice('Wybierz plik graficzny (PNG, JPG, WEBP...).', 'error');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        userAvatarData = typeof reader.result === 'string' ? reader.result : '';
+        localStorage.setItem(STORAGE_KEYS.avatarImage, userAvatarData);
+        renderAvatarImage();
+        setNotice('Avatar został zapisany lokalnie w przeglądarce.', 'ok');
+      };
+      reader.onerror = () => {
+        setNotice('Nie udało się odczytać pliku avatara.', 'error');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearAvatar() {
+      userAvatarData = '';
+      localStorage.removeItem(STORAGE_KEYS.avatarImage);
+      renderAvatarImage();
+      setNotice('Usunięto avatar. Pokazujemy domyślne miejsce fantasy.', 'info');
+    }
 
     function setAvatarState(state = 'idle') {
       const labels = {
@@ -706,6 +804,7 @@
       localStorage.setItem(STORAGE_KEYS.voiceEnabled, String(voiceEnabledInput.checked));
       localStorage.setItem(STORAGE_KEYS.autoRead, String(autoReadInput.checked));
       localStorage.setItem(STORAGE_KEYS.voiceName, voiceSelect.value || '');
+      localStorage.setItem(STORAGE_KEYS.avatarImage, userAvatarData || '');
     }
 
     function loadAll() {
@@ -716,7 +815,9 @@
       showAvatarInput.checked = localStorage.getItem(STORAGE_KEYS.showAvatar) !== 'false';
       voiceEnabledInput.checked = localStorage.getItem(STORAGE_KEYS.voiceEnabled) === 'true';
       autoReadInput.checked = localStorage.getItem(STORAGE_KEYS.autoRead) === 'true';
+      userAvatarData = localStorage.getItem(STORAGE_KEYS.avatarImage) || '';
       updateAvatarVisibility();
+      renderAvatarImage();
 
       try {
         const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
@@ -885,6 +986,14 @@
 
     autoReadInput.addEventListener('change', saveAll);
     voiceSelect.addEventListener('change', saveAll);
+    uploadAvatarBtn.addEventListener('click', () => avatarUploadInput.click());
+    changeAvatarBtn.addEventListener('click', () => avatarUploadInput.click());
+    removeAvatarBtn.addEventListener('click', clearAvatar);
+    avatarUploadInput.addEventListener('change', (event) => {
+      const file = event.target.files && event.target.files[0];
+      handleAvatarUpload(file);
+      avatarUploadInput.value = '';
+    });
 
     userInput.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' && !event.shiftKey) {
